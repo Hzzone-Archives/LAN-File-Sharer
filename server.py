@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.DEBUG,
 def server_run():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
+        print(SCAN_LAN.get_internal_ip())
         sock.bind((SCAN_LAN.get_internal_ip(), config.port))
     except socket.error as e:
         logging.error("socket create error: %s" % e)
