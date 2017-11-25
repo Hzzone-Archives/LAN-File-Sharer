@@ -34,10 +34,20 @@ class Server_transfer(threading.Thread):
 					break
 				self.connection.send(filedata)
 			fo.close()
-			logging.debug("server has sent %s to %s" % self.content)
-		# 传输目录信息
-		elif os.path.isdir(self.content):
-			pass
+			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
+		# 传输目录信息 or 初始化时传输共享文件的目录
+		elif os.path.isdir(self.content) or self.content == "*":
+			fhead = struct.pack('128sl', self.content, os.stat(self.content).st_size)
+			self.connection.send(fhead)
+			# with open(filepath,'rb') as fo: 这样发送文件有问题，发送完成后还会发一些东西过去
+			fo = open(self.content, 'rb')
+			while True:
+				filedata = fo.read(1024)
+				if not filedata:
+					break
+				self.connection.send(filedata)
+			fo.close()
+			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
 		else:
 			raise "send data is not a dir or file"
 	
@@ -87,7 +97,7 @@ class Client_transfer(threading.Thread):
 					if filesize - recvd_size > 1024:
 						rdata = s.recv(1024)
 						recvd_size += len(rdata)
-						print(recvd_size)
+						# print(recvd_size)
 					else:
 						rdata = s.recv(filesize - recvd_size)
 						recvd_size = filesize

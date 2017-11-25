@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG,
 def server_run():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        print(utils.get_internal_ip())
+        # print(utils.get_internal_ip())
         sock.bind((utils.get_internal_ip(), config.server_port))
     except socket.error as e:
         logging.error("socket create error: %s" % e)
