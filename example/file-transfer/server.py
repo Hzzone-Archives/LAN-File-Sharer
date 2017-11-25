@@ -20,6 +20,7 @@ def conn_thread(connection, address):
 			print(type(filename))
 			filename_f = filename.decode("utf-8").strip('\x00')
 			filenewname = os.path.join('/home/hzzone', ('new_' + filename_f))
+			print(filename.decode("utf-8"))
 			print('file new name is %s, filesize is %s' % (filenewname, filesize))
 			recvd_size = 0  # 定义接收了的文件大小
 			file = open(filenewname, 'wb')
@@ -28,6 +29,7 @@ def conn_thread(connection, address):
 				if filesize - recvd_size > 1024:
 					rdata = connection.recv(1024)
 					recvd_size += len(rdata)
+					print(recvd_size)
 				else:
 					rdata = connection.recv(filesize - recvd_size)
 					recvd_size = filesize

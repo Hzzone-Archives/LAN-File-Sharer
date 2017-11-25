@@ -19,4 +19,4 @@ if os.path.isfile(filepath):
 		s.send(filedata)
 	fo.close()
 	print('send over...')
-		# s.close()
+	s.close()

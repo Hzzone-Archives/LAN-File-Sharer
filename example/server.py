@@ -11,3 +11,4 @@ while True:
     msg = conn.recv(1024)
     if msg:
         logging.debug('received from %s: %s' % (address, msg))
+        conn.sendall("hh".encode())

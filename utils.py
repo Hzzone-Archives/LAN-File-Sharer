@@ -1,11 +1,9 @@
 import socket
 import logging
 import config
-import os
 from functools import reduce
 import threading
 import time
-import requests
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S')
@@ -62,7 +60,7 @@ class MyThread(threading.Thread):
         self.ip = ip
 
     def run(self):
-        self.result = scan_port(self.ip, config.port)
+        self.result = scan_port(self.ip, config.transfer_port)
 
     def get_result(self):
         return self.result
@@ -98,6 +96,6 @@ if __name__ == "__main__":
     # s.settimeout(0.1)
     # s.connect_ex((address, port))
     # print(s.connect_ex((address, port)))
-    # s.connect((get_internal_ip(), config.port))
-    # s.sendall("Hello world".encode())
+    # s.connect((get_internal_ip(), config.server_port))
+    # s.sendall("/home/hzzone/install.sh".encode())
     pass

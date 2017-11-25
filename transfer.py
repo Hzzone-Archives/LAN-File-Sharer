@@ -1,25 +1,105 @@
 import socket
 import threading
 import config
-
-class Send_Single_File_Thread(threading.Thread):
-
-    def __init__(self, ip, port, file_path):
-        threading.Thread.__init__(self)
-        self.ip = ip
-        self.port = port
-        self.file_path = file_path
-
-    def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.ip, self.port))
-        with open(self.file_path, 'rb') as f:
-            for data in f:
-                s.send(data)
-        s.close()
-
-    def get_result(self):
-        return self.result
+import os
+import logging
+import struct
+logging.basicConfig(level=logging.DEBUG,
+                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S')
+'''
+服务器端
+发送文件和目录信息的函数, 首先判断是否是目录, 如果是则发送文件, 否则发送目录下的信息, json字符串
+'''
+class Server_transfer(threading.Thread):
+	def __init__(self, connection, content):
+		threading.Thread.__init__(self)
+		self.connection = connection
+		self.content = content
+	
+	def run(self):
+		'''
+		传输文件
+		'''
+		if os.path.isfile(self.content):
+			# fileinfo_size = struct.calcsize('128sl')  # 定义打包规则
+			# 定义文件头信息，包含文件名和文件大小
+			fhead = struct.pack('128sl', os.path.basename(self.content), os.stat(self.content).st_size)
+			self.connection.send(fhead)
+			# with open(filepath,'rb') as fo: 这样发送文件有问题，发送完成后还会发一些东西过去
+			fo = open(self.content, 'rb')
+			while True:
+				filedata = fo.read(1024)
+				if not filedata:
+					break
+				self.connection.send(filedata)
+			fo.close()
+			logging.debug("server has sent %s to %s" % self.content)
+		# 传输目录信息
+		elif os.path.isdir(self.content):
+			pass
+		else:
+			raise "send data is not a dir or file"
+	
+	
+'''
+将要发送的服务器的地址, 和内容(文件或目录)
+服务器返回文件结构或文件内容
+'''
+class Client_transfer(threading.Thread):
+	def __init__(self, address, content, save_path=None):
+		threading.Thread.__init__(self)
+		self.address = address
+		self.content = content
+		self.save_path = save_path
+		self.postgress = 0
+	
+	def run(self):
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.connect(self.address)
+		s.send(self.content.encode())
+		logging.debug("client send to %s content: %s" % (self.address, self.content))
+		s.settimeout(600)
+		fileinfo_size = struct.calcsize('128sl')
+		buf = s.recv(fileinfo_size)
+		if buf:  # 如果不加这个if，第一个文件传输完成后会自动走到下一句
+			filename, filesize = struct.unpack('128sl', buf)
+			# print(data.decode())
+			filename_str = filename.decode("utf-8").strip('\x00')
+			logging.debug("received from %s: %s and size: %s" % (self.address, filename_str, filesize))
+			recvd_size = 0  # 定义接收了的文件大小
+			if self.save_path:
+				file = open(self.save_path, 'wb')
+				while not recvd_size == filesize:
+					if filesize - recvd_size > 1024:
+						rdata = s.recv(1024)
+						recvd_size += len(rdata)
+					else:
+						rdata = s.recv(filesize - recvd_size)
+						recvd_size = filesize
+					self.postgress = recvd_size/filesize
+					file.write(rdata)
+				file.close()
+				logging.debug("save received file to %s" % self.save_path)
+			else:
+				recvd_content = ''
+				while not recvd_size == filesize:
+					if filesize - recvd_size > 1024:
+						rdata = s.recv(1024)
+						recvd_size += len(rdata)
+						print(recvd_size)
+					else:
+						rdata = s.recv(filesize - recvd_size)
+						recvd_size = filesize
+					recvd_content += rdata.decode()
+				logging.debug("received folder info: %s" % recvd_content)
+			
+			s.close()
+	
+	def getPostgres(self):
+		if not self.save_path:
+			raise "before getting postgres, save path shouldn't be None"
+		return self.postgress
 
 if __name__ == "__main__":
-    pass
+	pass
