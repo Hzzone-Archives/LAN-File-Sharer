@@ -5,3 +5,24 @@
 3. 作为客户端, 开启新线程发送消息, 并循环接受服务器返回消息, 如果是文件, 则写入指定本地文件路径中, 并获取传输进度. 如果是目录, 则刷新ui.
 4. UI部分, 基于PyQt.    
 以上是基本思路.
+
+translate qt .ui file to .py
+```shell
+python3 -m PyQt5.uic.pyuic $FileName$ -o $FileNameWithoutExtension$
+```
+
+How to use
+```shell
+$ python3 main.py -h
+Usage: main.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -v SHAREFOLDER, --sharefolder=SHAREFOLDER
+                        folder you tend to share, default current folder
+  -p SERVER_PORT, --port=SERVER_PORT
+                        server port you tend to open for socket, default 8888
+  -s SAVEFOLDER, --savefolder=SAVEFOLDER
+                        folder you tend to save the downloaded file, default
+                        current folder/download
+```
