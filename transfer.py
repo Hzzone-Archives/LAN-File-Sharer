@@ -39,14 +39,16 @@ class Server_transfer(threading.Thread):
 			fo.close()
 			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
 		# 传输目录信息 or 初始化时传输共享文件的目录
-		elif (os.path.isdir(self.content) or self.content.decode() == "*"):
+		## 目前以这样的方式传输, folde/file, 为了安全不包含全部路径
+		elif (os.path.isdir(os.path.join(config.shared_folder, self.content.decode())) or self.content.decode() == "*"):
+			path = os.path.join(config.shared_folder, self.content.decode())
 			if self.content.decode() == "*":
 				shared_folder = [os.path.join(config.shared_folder, shared_file) for shared_file in os.listdir(config.shared_folder)]
-			if os.path.isdir(self.content):
-				shared_folder = [os.path.join(self.content, shared_file) for shared_file in os.listdir(self.content)]
+			if os.path.isdir(path):
+				shared_folder = [os.path.join(path, shared_file) for shared_file in os.listdir(path)]
 			shared_folder_dic = {}
 			for x in shared_folder:
-				shared_folder_dic[x] = os.path.isfile(x)
+				shared_folder_dic[x.strip(config.shared_folder)] = os.path.isfile(x)
 			send_content = str(shared_folder_dic).encode()
 			fhead = struct.pack('128sl', self.content, len(send_content))
 			self.connection.send(fhead)
@@ -86,6 +88,9 @@ class Client_transfer(threading.Thread):
 			filename_str = filename.decode("utf-8").strip('\x00')
 			logging.debug("received from %s: %s and size: %s" % (self.address, filename_str, filesize))
 			recvd_size = 0  # 定义接收了的文件大小
+			'''
+			接受文件并保存
+			'''
 			if self.save_path:
 				file = open(self.save_path, 'wb')
 				while not recvd_size == filesize:
@@ -99,13 +104,13 @@ class Client_transfer(threading.Thread):
 					file.write(rdata)
 				file.close()
 				logging.debug("save received file to %s" % self.save_path)
+			### 接受目录信息
 			else:
 				recvd_content = ''
 				while not recvd_size == filesize:
 					if filesize - recvd_size > 1024:
 						rdata = s.recv(1024)
 						recvd_size += len(rdata)
-						# print(recvd_size)
 					else:
 						rdata = s.recv(filesize - recvd_size)
 						recvd_size = filesize
