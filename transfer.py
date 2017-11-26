@@ -27,7 +27,10 @@ class Server_transfer(threading.Thread):
 			fhead = struct.pack('128sl', os.path.basename(self.content), os.stat(self.content).st_size)
 			self.connection.send(fhead)
 			# with open(filepath,'rb') as fo: 这样发送文件有问题，发送完成后还会发一些东西过去
-			fo = open(self.content, 'rb')
+			try:
+				fo = open(self.content, 'rb')
+			except FileNotFoundError as e:
+				raise "File not found"
 			while True:
 				filedata = fo.read(1024)
 				if not filedata:
@@ -36,17 +39,22 @@ class Server_transfer(threading.Thread):
 			fo.close()
 			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
 		# 传输目录信息 or 初始化时传输共享文件的目录
-		elif os.path.isdir(self.content) or self.content == "*":
-			fhead = struct.pack('128sl', self.content, os.stat(self.content).st_size)
+		elif (os.path.isdir(self.content) or self.content.decode() == "*"):
+			if self.content.decode() == "*":
+				shared_folder = [os.path.join(config.shared_folder, shared_file) for shared_file in os.listdir(config.shared_folder)]
+			if os.path.isdir(self.content):
+				shared_folder = [os.path.join(self.content, shared_file) for shared_file in os.listdir(self.content)]
+			shared_folder_dic = {}
+			for x in shared_folder:
+				shared_folder_dic[x] = os.path.isfile(x)
+			send_content = str(shared_folder_dic).encode()
+			fhead = struct.pack('128sl', self.content, len(send_content))
 			self.connection.send(fhead)
-			# with open(filepath,'rb') as fo: 这样发送文件有问题，发送完成后还会发一些东西过去
-			fo = open(self.content, 'rb')
-			while True:
-				filedata = fo.read(1024)
-				if not filedata:
-					break
-				self.connection.send(filedata)
-			fo.close()
+			for x in range(0, len(send_content), 1024):
+				if len(send_content)-x < 1024:
+					self.connection.send(send_content[x:len(send_content)])
+				else:
+					self.connection.send(send_content[x:x+1024])
 			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
 		else:
 			raise "send data is not a dir or file"
@@ -108,7 +116,7 @@ class Client_transfer(threading.Thread):
 	
 	def getPostgres(self):
 		if not self.save_path:
-			raise "before getting postgres, save path shouldn't be None"
+			raise "before getting postgress, save path shouldn't be None"
 		return self.postgress
 
 if __name__ == "__main__":
