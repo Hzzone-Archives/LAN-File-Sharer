@@ -4,6 +4,7 @@ import config
 import os
 import logging
 import struct
+import json
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
@@ -15,8 +16,12 @@ class Server_transfer(threading.Thread):
 	def __init__(self, connection, content):
 		threading.Thread.__init__(self)
 		self.connection = connection
-		self.content = content
-	
+		if content.decode() == "*":
+			self.content = "*"
+		else:
+			data = json.loads(content.decode())
+			self.content = os.path.join(config.shared_folder, os.path.sep.join(data))
+
 	def run(self):
 		'''
 		传输文件
@@ -24,7 +29,7 @@ class Server_transfer(threading.Thread):
 		if os.path.isfile(self.content):
 			# fileinfo_size = struct.calcsize('128sl')  # 定义打包规则
 			# 定义文件头信息，包含文件名和文件大小
-			fhead = struct.pack('128sl', os.path.basename(self.content), os.stat(self.content).st_size)
+			fhead = struct.pack('128sl', os.path.basename(self.content).encode(), os.stat(self.content).st_size)
 			self.connection.send(fhead)
 			# with open(filepath,'rb') as fo: 这样发送文件有问题，发送完成后还会发一些东西过去
 			try:
@@ -40,17 +45,32 @@ class Server_transfer(threading.Thread):
 			logging.debug("server has sent %s to %s" % (self.content, self.connection.getpeername()))
 		# 传输目录信息 or 初始化时传输共享文件的目录
 		## 目前以这样的方式传输, folde/file, 为了安全不包含全部路径
-		elif (os.path.isdir(os.path.join(config.shared_folder, self.content.decode())) or self.content.decode() == "*"):
-			path = os.path.join(config.shared_folder, self.content.decode())
-			if self.content.decode() == "*":
-				shared_folder = [os.path.join(config.shared_folder, shared_file) for shared_file in os.listdir(config.shared_folder)]
-			if os.path.isdir(path):
-				shared_folder = [os.path.join(path, shared_file) for shared_file in os.listdir(path)]
-			shared_folder_dic = {}
-			for x in shared_folder:
-				shared_folder_dic[x.strip(config.shared_folder)] = os.path.isfile(x)
-			send_content = str(shared_folder_dic).encode()
-			fhead = struct.pack('128sl', self.content, len(send_content))
+		elif os.path.isdir(self.content) or self.content == "*":
+			# path = os.path.join(config.shared_folder, self.content.decode())
+			shared_files = {}
+			if self.content == "*":
+				# shared_folder = [os.path.join(config.shared_folder, shared_file) for shared_file in os.listdir(config.shared_folder)]
+				# for root, dirs, files in os.walk(config.shared_folder):
+				# 	for each_file in files:
+				# 		path = os.path.join(root, each_file)
+				# 		# print(path.strip(config.shared_folder+os.path.sep))
+				# 		shared_files.append(path.replace(config.shared_folder+os.path.sep, "").split(os.path.sep))
+				for p in os.listdir(config.shared_folder):
+					path = os.path.join(config.shared_folder, p)
+					if os.path.isfile(path):
+						shared_files[p] = os.path.isdir(path)
+					elif os.listdir(path):
+						shared_files[p] = os.path.isdir(path)
+			else:
+				# path = os.path.join(config.shared_folder, os.path.sep.join(json.loads(self.content.decode())))
+				for p in os.listdir(self.content):
+					path = os.path.join(self.content, p)
+					if os.path.isfile(path):
+						shared_files[p] = os.path.isdir(path)
+					elif os.listdir(path):
+						shared_files[p] = os.path.isdir(path)
+			send_content = json.dumps(shared_files).encode()
+			fhead = struct.pack('128sl', self.content.encode(), len(send_content))
 			self.connection.send(fhead)
 			for x in range(0, len(send_content), 1024):
 				if len(send_content)-x < 1024:
@@ -73,6 +93,7 @@ class Client_transfer(threading.Thread):
 		self.content = content
 		self.save_path = save_path
 		self.postgress = 0
+		self.recvd_content = ""
 	
 	def run(self):
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -106,7 +127,6 @@ class Client_transfer(threading.Thread):
 				logging.debug("save received file to %s" % self.save_path)
 			### 接受目录信息
 			else:
-				recvd_content = ''
 				while not recvd_size == filesize:
 					if filesize - recvd_size > 1024:
 						rdata = s.recv(1024)
@@ -114,8 +134,8 @@ class Client_transfer(threading.Thread):
 					else:
 						rdata = s.recv(filesize - recvd_size)
 						recvd_size = filesize
-					recvd_content += rdata.decode()
-				logging.debug("received folder info: %s" % recvd_content)
+					self.recvd_content += rdata.decode()
+				logging.debug("received folder info: %s" % self.recvd_content)
 			
 			s.close()
 	

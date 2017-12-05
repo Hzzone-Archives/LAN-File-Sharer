@@ -4,6 +4,7 @@ import config
 from functools import reduce
 import threading
 import time
+import os
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S')
@@ -60,7 +61,7 @@ class MyThread(threading.Thread):
         self.ip = ip
 
     def run(self):
-        self.result = scan_port(self.ip, config.transfer_port)
+        self.result = scan_port(self.ip, config.server_port)
 
     def get_result(self):
         return self.result
@@ -76,7 +77,7 @@ def scan_lan():
     threads = [MyThread(ip) for ip in temp]
     for t in threads:
         t.start()
-    time.sleep(5)
+    time.sleep(config.sleep_time*5)
     temp = [t.get_result() for t in threads]
     alive_addr = []
     for x in temp:
@@ -84,6 +85,8 @@ def scan_lan():
             alive_addr.append(x)
     logging.debug("scanned alive ip address " + str(alive_addr))
     return alive_addr
+
+
 
 
 

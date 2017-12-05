@@ -5,3 +5,5 @@ server_port = 8888
 shared_folder = os.path.dirname(os.path.realpath(__file__))
 # 默认传输的文件保存路径为主目录
 default_save_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "download")
+
+sleep_time = 0.5
