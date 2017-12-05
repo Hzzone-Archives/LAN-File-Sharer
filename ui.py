@@ -14,12 +14,14 @@ import utils
 import transfer
 import config
 import json
-import time
+import os
 
 class Ui_MainWindow(QObject):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(400, 300)
+        # self.progress_bar = MProgress()
+        # self.progress_bar.setVisible(False)
         self.centralWidget = QtWidgets.QWidget(MainWindow)
         self.centralWidget.setObjectName("centralWidget")
         self.host_listview = QtWidgets.QListView(self.centralWidget)
@@ -52,6 +54,8 @@ class Ui_MainWindow(QObject):
 
         self.file_listview.expanded.connect(self.init_file_list)
         self.host_listview.doubleClicked.connect(self.init_file_list)
+
+        self.file_listview.doubleClicked.connect(self.download_file)
 
         self.file_listview.setModel(self.file_model)
         self.host_listview.setModel(self.host_model)
@@ -103,7 +107,6 @@ class Ui_MainWindow(QObject):
                 # path_list.append(parent_item.text())
                 path_list.insert(0, parent_item.text())
                 parent_item = parent_item.parent()
-            print(path_list)
             transfer_thread = transfer.Client_transfer((utils.get_internal_ip(), config.server_port), json.dumps(path_list))
             transfer_thread.start()
             # time.sleep(config.sleep_time)
@@ -117,11 +120,69 @@ class Ui_MainWindow(QObject):
                     i = QStandardItem(key)
                     i.appendRow(QStandardItem(""))
                     item.appendRow(i)
-            # item.appendRow(QStandardItem("hh"))
-            # print(data)
 
 
-    def md(self, signal):
-        print(self.file_model.itemFromIndex(signal))
+    def download_file(self, signal):
+        item = self.file_model.itemFromIndex(signal)
+        parent_item = item.parent()
+        path_list = [item.text()]
+        while parent_item:
+            path_list.insert(0, parent_item.text())
+            parent_item = parent_item.parent()
+        if item.rowCount() == 0:
+            transfer_thread = transfer.Client_transfer((utils.get_internal_ip(), config.server_port), json.dumps(path_list), os.path.join(config.default_save_folder, path_list[-1]))
+            transfer_thread.start()
+            # progress_bar = MProgress(transfer_thread)
+            # progress_bar.setVisible(False)
+            # progress_bar.show()
 
+
+# class MProgress(QWidget):
+#     def __init__(self, download_thread=None):
+#         super(MProgress, self).__init__()
+#         self.download_thread = download_thread
+#         self.initUI()
+#
+#     def initUI(self):
+#         self.pbar = QProgressBar(self)
+#         self.pbar.setGeometry(30, 40, 200, 25)
+#         self.setGeometry(300, 300, 280, 170)
+#         self.setWindowTitle('下载进度')
+#         postgress = self.download_thread.getPostgres()
+#         if postgress == 1:
+#             self.pbar.setValue(0)
+#             self.setVisible(False)
+#         else:
+#             self.pbar.setValue(postgress)
+
+
+# class MProgress(QWidget):
+#     def __init__(self):
+#         super(MProgress, self).__init__()
+#         self.initUI()
+#     def initUI(self):
+#         self.pbar = QProgressBar(self)
+#         self.pbar.setGeometry(30, 40, 200, 25)
+#         self.btn = QtWidgets.QPushButton('Start', self)
+#         self.btn.move(40, 80)
+#         self.btn.clicked.connect(self.doAction)
+#         self.timer = QBasicTimer()
+#         self.step = 0
+#         self.setGeometry(300, 300, 280, 170)
+#         self.setWindowTitle('QtGui.QProgressBar')
+#         self.show()
+#     def timerEvent(self, e):
+#         if self.step >= 100:
+#             self.timer.stop()
+#             self.btn.setText('Finished')
+#             return
+#         self.step = self.step + 1
+#         self.pbar.setValue(self.step)
+#     def doAction(self):
+#         if self.timer.isActive():
+#             self.timer.stop()
+#             self.btn.setText('Start')
+#         else:
+#             self.timer.start(100, self)
+#             self.btn.setText('Stop')
 
