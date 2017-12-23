@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'mainwindow.ui'
-#
-# Created by: PyQt5 UI code generator 5.9
-#
-# WARNING! All changes made in this file will be lost!
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -22,6 +16,8 @@ class Ui_MainWindow(QObject):
         MainWindow.resize(400, 300)
         # self.progress_bar = MProgress()
         # self.progress_bar.setVisible(False)
+        self.current_ip = ""
+        self.internal_ip = utils.get_internal_ip()
         self.centralWidget = QtWidgets.QWidget(MainWindow)
         self.centralWidget.setObjectName("centralWidget")
         self.host_listview = QtWidgets.QListView(self.centralWidget)
@@ -83,9 +79,11 @@ class Ui_MainWindow(QObject):
     def init_file_list(self, signal):
         my_sender = self.sender()
         if isinstance(my_sender, QListView):
+            item = self.host_model.itemFromIndex(signal)
+            self.current_ip = item.text()
             self.file_model.clear()
             self.file_model.setHorizontalHeaderLabels(["路径"])
-            transfer_thread = transfer.Client_transfer((utils.get_internal_ip(), config.server_port), "*")
+            transfer_thread = transfer.Client_transfer((self.current_ip, config.server_port), "*")
             transfer_thread.start()
             # time.sleep(config.sleep_time)
             while not transfer_thread.recvd_content:
@@ -107,7 +105,8 @@ class Ui_MainWindow(QObject):
                 # path_list.append(parent_item.text())
                 path_list.insert(0, parent_item.text())
                 parent_item = parent_item.parent()
-            transfer_thread = transfer.Client_transfer((utils.get_internal_ip(), config.server_port), json.dumps(path_list))
+            print(self.current_ip)
+            transfer_thread = transfer.Client_transfer((self.current_ip, config.server_port), json.dumps(path_list))
             transfer_thread.start()
             # time.sleep(config.sleep_time)
             while not transfer_thread.recvd_content:
@@ -130,7 +129,7 @@ class Ui_MainWindow(QObject):
             path_list.insert(0, parent_item.text())
             parent_item = parent_item.parent()
         if item.rowCount() == 0:
-            transfer_thread = transfer.Client_transfer((utils.get_internal_ip(), config.server_port), json.dumps(path_list), os.path.join(config.default_save_folder, path_list[-1]))
+            transfer_thread = transfer.Client_transfer((self.current_ip, config.server_port), json.dumps(path_list), os.path.join(config.default_save_folder, path_list[-1]))
             transfer_thread.start()
             # progress_bar = MProgress(transfer_thread)
             # progress_bar.setVisible(False)
