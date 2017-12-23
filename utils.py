@@ -30,7 +30,7 @@ def is_internal_ip(ip):
 '''
 def scan_port(address, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(0.1)
+    s.settimeout(1)
     if s.connect_ex((address, port)) == 0:
         logging.debug("port scan, %s %s" % (address, port))
     else:
@@ -74,10 +74,11 @@ def scan_lan():
     local_ip = get_internal_ip()
     t = '.'.join(local_ip.split('.')[:3])
     temp = [t+'.'+str(x) for x in list(range(256))]
+    # print(temp)
     threads = [MyThread(ip) for ip in temp]
     for t in threads:
         t.start()
-    time.sleep(config.sleep_time*5)
+    time.sleep(config.sleep_time*10)
     temp = [t.get_result() for t in threads]
     alive_addr = []
     for x in temp:
@@ -91,7 +92,7 @@ def scan_lan():
 
 
 if __name__ == "__main__":
-    # scan_port("192.168.1.157", config.port)
+    # print(scan_port("192.168.21.102", config.server_port))
     # address = scan_lan()[0]
     # print(scan_lan())
     # print(socket.gethostbyaddr("10.132.50.123"))
@@ -101,4 +102,5 @@ if __name__ == "__main__":
     # print(s.connect_ex((address, port)))
     # s.connect((get_internal_ip(), config.server_port))
     # s.sendall("/home/hzzone/install.sh".encode())
+    print(scan_lan())
     pass
