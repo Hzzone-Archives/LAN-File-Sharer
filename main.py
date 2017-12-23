@@ -1,12 +1,12 @@
-import transfer
 import config
-import utils
 import os
 import ui
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from optparse import OptionParser
 import logging
+import server
+import threading
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
@@ -32,10 +32,7 @@ def init():
 
 def main():
 	init()
-	# transfer.Client_transfer((utils.get_internal_ip(), config.server_port), "/Users/HZzone/Desktop/template_2.jpg", "/Users/HZzone/Desktop/new_template_2.jpg").start()
-	# transfer.Client_transfer((utils.get_internal_ip(), config.server_port), ".git").start()
-	# transfer.Client_transfer((utils.get_internal_ip(), config.server_port), "*").start()
-	# transfer.Client_transfer((utils.get_internal_ip(), config.server_port), ".uit").start()
+	threading.Thread(target=server.server_run).start()
 	app = QApplication(sys.argv)
 	MainWindow = QMainWindow()
 	window_ui = ui.Ui_MainWindow()
@@ -46,5 +43,3 @@ def main():
 	
 if __name__ == "__main__":
 	main()
-	# print(socket.gethostbyaddr("192.168.21.101"))
-	# print(socket.getaddrinfo("192.168.21.101", config.server_port))
